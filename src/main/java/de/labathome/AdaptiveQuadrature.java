@@ -37,8 +37,9 @@ public class AdaptiveQuadrature {
 	 * @param upperBound upper boundary of integral; can be {@code Double.POSITIVE_INFINITY}
 	 * @param relTol relative tolerance; set to {@code Double.NaN} to disable
 	 * @param absTol absolute tolerance; set to {@code Double.NaN} to disable
+	 * @param maxEval maximum number of function evaluations; set to 0 to disable limit on number of function evaluations
 	 */
-	public static double[] integrate(Integrand integrand, double lowerBound, double upperBound, double relTol, double absTol) {
+	public static double[] integrate(Integrand integrand, double lowerBound, double upperBound, double relTol, double absTol, int maxEval) {
 
 		if (Double.isNaN(lowerBound)) {
 			throw new RuntimeException("lower bound must not be NaN");
@@ -54,15 +55,14 @@ public class AdaptiveQuadrature {
 				throw new RuntimeException("integral from "+lowerBound+" to "+upperBound+" is not supported");
 			}
 
-			// otherwise quick return:
-			// equal lower and upper bound mean an integral of zero
+			// otherwise quick return: equal lower and upper bound mean an integral of zero
 			return new double[] {0.0, 0.0};
 		}
 
 		// invert integral value if bounds are swapped
-		boolean invert = (lowerBound > upperBound);
+		final boolean invert = (lowerBound > upperBound);
 		if (invert) {
-			double temp = upperBound;
+			final double temp = upperBound;
 			upperBound = lowerBound;
 			lowerBound = temp;
 		}
@@ -72,24 +72,83 @@ public class AdaptiveQuadrature {
 		final double scaledLowerBound = rescaledIntegrand.getScaledLowerBound();
 		final double scaledUpperBound = rescaledIntegrand.getScaledUpperBound();
 
-		double result = 0.0;
-		double errorEstimate = Double.POSITIVE_INFINITY;
 
 		double center = (scaledUpperBound+scaledLowerBound)/2.0;
 		double halfWidth = (scaledUpperBound-scaledLowerBound)/2.0;
-
-		double fCenter = integrand.eval(center)[0];
-		if (!Double.isFinite(fCenter)) {
-			throw new RuntimeException("Evaluation of integrand at interval center failed: got "+fCenter);
-		}
-
 		Interval rootInterval = new Interval(center, halfWidth);
 
 		List<Interval> intervalsToEval = new ArrayList<>();
 		intervalsToEval.add(rootInterval);
 
-		double[][] gkResult = GaussKronrod.evalGaussKronrod(rescaledIntegrand, intervalsToEval);
+		GaussKronrod.evalGaussKronrod(rescaledIntegrand, intervalsToEval);
 
+		IntervalHeap intervalHeap = new IntervalHeap();
+		intervalHeap.add(rootInterval);
+
+		int numEval = 15;
+		boolean converged = true;
+		double result = intervalHeap.getIntegralValue();
+		double errorEstimate = intervalHeap.getErrorEstimate();
+
+		// adaptively refine intervals until convergence
+		while (maxEval == 0 || numEval < maxEval) {
+			result = intervalHeap.getIntegralValue();
+			errorEstimate = intervalHeap.getErrorEstimate();
+
+			converged = false;
+			if (!Double.isNaN(absTol)) {
+				converged |= errorEstimate < absTol;
+			}
+			if (!Double.isNaN(relTol)) {
+				converged |= errorEstimate < Math.abs(result)*relTol;
+			}
+
+			if (converged) {
+				System.out.println("converged after "+numEval+" function evaluations");
+				break;
+			}
+
+			do {
+				Interval worstInterval = intervalHeap.poll();
+				errorEstimate -= worstInterval.getErrorEstimate();
+
+				Interval worstSplit = worstInterval.cutInHalf();
+				intervalsToEval.add(worstInterval); // re-add halvened original interval
+				intervalsToEval.add(worstSplit); // add other half of previous interval
+
+				numEval += 2*GaussKronrod.NUM_KRONROD_POINTS;
+
+				converged = false;
+				if (!Double.isNaN(absTol)) {
+					converged |= errorEstimate < absTol;
+				}
+				if (!Double.isNaN(relTol)) {
+					converged |= errorEstimate < Math.abs(result)*relTol;
+				}
+
+				if (converged) {
+					break;
+				}
+
+			} while (intervalHeap.size() > 0 && (numEval < maxEval || maxEval==0));
+
+			GaussKronrod.evalGaussKronrod(rescaledIntegrand, intervalsToEval);
+
+			for (Interval interval: intervalsToEval) {
+				intervalHeap.add(interval);
+			}
+		}
+
+		if (!converged) {
+			System.out.println("Cubature did not converge after "+numEval+" function evaluations!");
+		}
+
+		result = 0.0;
+		errorEstimate = 0.0;
+		for (Interval interval: intervalHeap) {
+			result += interval.getIntegralValue();
+			errorEstimate += interval.getErrorEstimate();
+		}
 
 		if (invert) {
 			return new double[] {-result, errorEstimate};
@@ -101,13 +160,23 @@ public class AdaptiveQuadrature {
 
 	public static void main(String[] args) {
 
+		double a = Double.POSITIVE_INFINITY;
+		double b = Double.POSITIVE_INFINITY;
+		System.out.println(a == b);
+		System.out.println(Double.isInfinite(a));
+
+		a = Double.NEGATIVE_INFINITY;
+		b = Double.NEGATIVE_INFINITY;
+		System.out.println(a == b);
+		System.out.println(Double.isInfinite(a));
+
 		class Parabola implements Integrand {
 			@Override
 			public double[] eval(double... x) {
 				int n = x.length;
 				double[] f = new double[n];
 				for (int i=0; i<n; ++i) {
-					f[i] = 0.5*x[i]*x[i];
+					f[i] = 3.0*x[i]*x[i];
 				}
 				return f;
 			}
@@ -115,7 +184,8 @@ public class AdaptiveQuadrature {
 
 		Parabola integrand = new Parabola();
 
-		double[] result = AdaptiveQuadrature.integrate(integrand, 0.0, 1.0, 1.0e-6, 1.0e-6);
+		double[] result = AdaptiveQuadrature.integrate(integrand, 0.0, 1.0, 1.0e-6, 1.0e-6, 0);
+		System.out.printf("integral = %.3e +/- %.3e\n", result[0], result[1]);
 	}
 
 
