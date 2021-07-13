@@ -27,15 +27,15 @@ public class GaussKronrod {
 	};
 
 	/** weights for 7-point Gauss-Legendre quadrature */
-	public static double[] W_GAUSS_7 = {
-		4.179591836734693877551020408163265e-01, //     0
-		3.818300505051189449503697754889751e-01, // +/- 1
-		2.797053914892766679014677714237796e-01, // +/- 2
-		1.294849661688696932706114326790820e-01  // +/- 3
+	public static double[] W_GAUSS = {
+		4.179591836734693877551020408163265e-01, //     0 (*)
+		3.818300505051189449503697754889751e-01, // +/- 1 (*)
+		2.797053914892766679014677714237796e-01, // +/- 2 (*)
+		1.294849661688696932706114326790820e-01  // +/- 3 (*)
 	};
 
 	/** weights for 15-point Kronrod quadrature */
-	public static double[] W_KRONROD_15 = {
+	public static double[] W_KRNRD = {
 		2.094821410847278280129991748917143e-01, //     0 (*)
 		2.044329400752988924141619992346491e-01, // +/- 1
 		1.903505780647854099132564024210137e-01, // +/- 2 (*)
@@ -47,50 +47,77 @@ public class GaussKronrod {
 	};
 
 	public static double[][] evalGaussKronrod(Integrand integrand, List<Interval> intervals) {
-
 		int numIntervals = intervals.size();
 
-		final int n = 7;
-		double[] evaluationLocations = new double[numIntervals*(2*n+1)];
+		final int numGaussPoints = 7;
+		final int numKronrodPoints = 2*numGaussPoints+1;
+		double[] evaluationLocations = new double[numIntervals*numKronrodPoints];
 
+		int intervalStartIdx;
+		double center, halfWidth;
 		for (int i=0; i<numIntervals; ++i) {
-			final Interval interval = intervals.get(i);
-			final double center = interval.getCenter();
-			final double halfWidth = interval.getHalfWidth();
 
-			evaluationLocations[0] = center;
+			final Interval interval = intervals.get(i);
+			center = interval.getCenter();
+			halfWidth = interval.getHalfWidth();
+
+			intervalStartIdx = i*numKronrodPoints;
+
+			evaluationLocations[intervalStartIdx] = center;
+			System.out.printf(" center: f(   %d ) into %2d\n", 0, 0);
 
 			// 7-point Gauss-Legendre
-			for (int j=1; j < n; j += 2) {
-				System.out.println("Gauss: f(-p["+j+"]) into "+(j)+" ; f(+p["+j+"]) into "+(j+1));
-				evaluationLocations[j  ] = center-halfWidth*GaussKronrod.P_GK_7_15[j];
-				evaluationLocations[j+1] = center+halfWidth*GaussKronrod.P_GK_7_15[j];
+			for (int j=1; j < numGaussPoints; j += 2) {
+				System.out.printf("  Gauss: f(-p[%d]) into %2d ; f(+p[%d]) into %2d\n", j, j, j, j+1);
+				evaluationLocations[intervalStartIdx+j  ] = center-halfWidth*GaussKronrod.P_GK_7_15[j];
+				evaluationLocations[intervalStartIdx+j+1] = center+halfWidth*GaussKronrod.P_GK_7_15[j];
 			}
 
 			// additional 8 points for 15-point Kronrod
-			for (int j=0; j<n; j+=2) {
-				System.out.println("Kronrod: f(-p["+j+"]) into "+(n+j)+" ; f(+p["+j+"]) into "+(n+j+1));
-				evaluationLocations[n+j  ] = center-halfWidth*GaussKronrod.P_GK_7_15[j];
-				evaluationLocations[n+j+1] = center+halfWidth*GaussKronrod.P_GK_7_15[j];
+			for (int j=0; j<numGaussPoints; j+=2) {
+				System.out.printf("Kronrod: f(-p[%d]) into %2d ; f(+p[%d]) into %2d\n", j, numGaussPoints+j, j, numGaussPoints+j+1);
+				evaluationLocations[intervalStartIdx+numGaussPoints+j  ] = center-halfWidth*GaussKronrod.P_GK_7_15[j];
+				evaluationLocations[intervalStartIdx+numGaussPoints+j+1] = center+halfWidth*GaussKronrod.P_GK_7_15[j];
 			}
 		}
 
 		// evaluate integrand
 		final double[] functionValues = integrand.eval(evaluationLocations);
 
+		// compute Gauss-Kronrod quadrature results
+		final double[] resultGauss = new double[numIntervals];
+		final double[] resultKrnrd = new double[numIntervals];
 
-		// compute Gauss-Kronrod quadrature result
-		final double[] gaussResults = new double[numIntervals];
-		final double[] kronrodResults = new double[numIntervals];
-
+		double fVal;
 		for (int i=0; i<numIntervals; ++i) {
+			intervalStartIdx = i*numKronrodPoints;
 
+			resultGauss[i] = functionValues[intervalStartIdx] * W_GAUSS[0];
+			resultKrnrd[i] = functionValues[intervalStartIdx] * W_KRNRD[0];
 
+			// 7-point Gauss-Legendre
+			for (int j=1; j <= numGaussPoints/2; ++j) {
+				System.out.printf("  Gauss: f[%2d]*wG[%d] ; f[%2d]*wG[%d]\n", 2*j-1, j, 2*j, j);
+				System.out.printf("Kronrod: f[%2d]*wK[%d] ; f[%2d]*wK[%d]\n", 2*j-1, 2*j, 2*j, 2*j);
+				fVal = functionValues[intervalStartIdx+2*j-1] + functionValues[intervalStartIdx+2*j];
+				resultGauss[i] += fVal*W_GAUSS[  j];
+				resultKrnrd[i] += fVal*W_KRNRD[2*j];
+			}
 
+			// additional 8 points for 15-point Kronrod
+			for (int j=0; j <= numGaussPoints/2; ++j) {
+				System.out.printf("Kronrod: f[%2d]*wK[%d] ; f[%2d]*wK[%d]\n", numGaussPoints+2*j, 2*j+1, numGaussPoints+2*j+1, 2*j+1);
+				fVal = functionValues[intervalStartIdx+numGaussPoints+2*j] + functionValues[intervalStartIdx+numGaussPoints+2*j+1];
+				resultKrnrd[i] += fVal*W_KRNRD[2*j+1];
+			}
+
+			halfWidth = intervals.get(i).getHalfWidth();
+			resultGauss[i] *= halfWidth;
+			resultKrnrd[i] *= halfWidth;
 
 		}
 
-		return new double[][] {gaussResults, kronrodResults};
+		return new double[][] {resultGauss, resultKrnrd};
 	}
 
 

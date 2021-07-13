@@ -27,6 +27,10 @@ public class Interval implements Comparable<Interval> {
 		this.integralValue = integralValue;
 	}
 
+	public void setErrorEstimate(double errorEstimate) {
+		this.errorEstimate = errorEstimate;
+	}
+
 	public double getIntegralValue() {
 		return integralValue;
 	}
