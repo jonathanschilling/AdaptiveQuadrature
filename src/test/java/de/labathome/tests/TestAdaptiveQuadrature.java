@@ -9,6 +9,12 @@ import de.labathome.Integrand;
 
 public class TestAdaptiveQuadrature {
 
+	/**
+	 * Test a definite integral:
+	 * <pre>
+	 * 1/3 \int_0^1 x^2 dx = 1
+	 * </pre>
+	 */
 	@Test
 	public void testParabola() {
 
@@ -34,6 +40,12 @@ public class TestAdaptiveQuadrature {
 		assertAbsRelEqual(0.0, result[1], tolerance);
 	}
 
+	/**
+	 * Test a semi-indefinite integral:
+	 * <pre>
+	 * \int_0^{+\infty} exp(-x^2} dx = \sqrt(pi)/2
+	 * </pre>
+	 */
 	@Test
 	public void testExpX2() {
 

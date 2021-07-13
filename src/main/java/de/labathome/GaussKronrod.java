@@ -19,7 +19,6 @@ public class GaussKronrod {
 	public static final int NUM_GAUSS_POINTS = 7;
 	public static final int NUM_KRONROD_POINTS = 2*NUM_GAUSS_POINTS+1;
 
-
 	// Nodes marked by (*) belong to the embedded Gauss-Legendre quadrature.
 
 	/** poles for 7/15-point Gauss-Kronrod quadrature */

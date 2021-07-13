@@ -59,9 +59,9 @@ public class AdaptiveQuadrature {
 			return new double[] {0.0, 0.0};
 		}
 
-		// invert integral value if bounds are swapped
-		final boolean invert = (lowerBound > upperBound);
-		if (invert) {
+		// reverse integral value if bounds are reversed
+		final boolean boundsReversed = (lowerBound > upperBound);
+		if (boundsReversed) {
 			final double temp = upperBound;
 			upperBound = lowerBound;
 			lowerBound = temp;
@@ -72,7 +72,7 @@ public class AdaptiveQuadrature {
 		final double scaledLowerBound = rescaledIntegrand.getScaledLowerBound();
 		final double scaledUpperBound = rescaledIntegrand.getScaledUpperBound();
 
-
+		// initial interval spans whole region between bounds
 		double center = (scaledUpperBound+scaledLowerBound)/2.0;
 		double halfWidth = (scaledUpperBound-scaledLowerBound)/2.0;
 		Interval rootInterval = new Interval(center, halfWidth);
@@ -83,9 +83,9 @@ public class AdaptiveQuadrature {
 		GaussKronrod.evalGaussKronrod(rescaledIntegrand, intervalsToEval);
 
 		IntervalHeap intervalHeap = new IntervalHeap();
-		intervalHeap.add(rootInterval);
+		intervalHeap.add(intervalsToEval.get(0));
 
-		int numEval = 15;
+		int numEval = GaussKronrod.NUM_KRONROD_POINTS;
 		boolean converged = true;
 		double result = intervalHeap.getIntegralValue();
 		double errorEstimate = intervalHeap.getErrorEstimate();
@@ -114,9 +114,9 @@ public class AdaptiveQuadrature {
 				Interval worstInterval = intervalHeap.poll();
 				errorEstimate -= worstInterval.getErrorEstimate();
 
-				Interval worstSplit = worstInterval.cutInHalf();
-				intervalsToEval.add(worstInterval); // re-add halvened original interval
-				intervalsToEval.add(worstSplit); // add other half of previous interval
+				Interval halfOfWorst = worstInterval.cutInHalf();
+				intervalsToEval.add(worstInterval); // re-add halvened original worst interval
+				intervalsToEval.add(halfOfWorst); // add other half of worst interval
 
 				numEval += 2*GaussKronrod.NUM_KRONROD_POINTS;
 
@@ -128,11 +128,7 @@ public class AdaptiveQuadrature {
 					converged |= errorEstimate < Math.abs(result)*relTol;
 				}
 
-				if (converged) {
-					break;
-				}
-
-			} while (intervalHeap.size() > 0 && (numEval < maxEval || maxEval==0));
+			} while (intervalHeap.size() > 0 && (numEval < maxEval || maxEval==0) && !converged);
 
 			GaussKronrod.evalGaussKronrod(rescaledIntegrand, intervalsToEval);
 
@@ -145,6 +141,7 @@ public class AdaptiveQuadrature {
 			System.out.println("Cubature did not converge after "+numEval+" function evaluations!");
 		}
 
+		// assemble final estimates for result and error estimate
 		result = 0.0;
 		errorEstimate = 0.0;
 		for (Interval interval: intervalHeap) {
@@ -152,43 +149,10 @@ public class AdaptiveQuadrature {
 			errorEstimate += interval.getErrorEstimate();
 		}
 
-		if (invert) {
+		if (boundsReversed) {
 			return new double[] {-result, errorEstimate};
 		} else {
 			return new double[] {result, errorEstimate};
 		}
 	}
-
-
-	public static void main(String[] args) {
-
-		double a = Double.POSITIVE_INFINITY;
-		double b = Double.POSITIVE_INFINITY;
-		System.out.println(a == b);
-		System.out.println(Double.isInfinite(a));
-
-		a = Double.NEGATIVE_INFINITY;
-		b = Double.NEGATIVE_INFINITY;
-		System.out.println(a == b);
-		System.out.println(Double.isInfinite(a));
-
-		class Parabola implements Integrand {
-			@Override
-			public double[] eval(double... x) {
-				int n = x.length;
-				double[] f = new double[n];
-				for (int i=0; i<n; ++i) {
-					f[i] = 3.0*x[i]*x[i];
-				}
-				return f;
-			}
-		};
-
-		Parabola integrand = new Parabola();
-
-		double[] result = AdaptiveQuadrature.integrate(integrand, 0.0, 1.0, 1.0e-6, 1.0e-6, 0);
-		System.out.printf("integral = %.3e +/- %.3e\n", result[0], result[1]);
-	}
-
-
 }

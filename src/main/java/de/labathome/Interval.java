@@ -47,7 +47,6 @@ public class Interval implements Comparable<Interval> {
 		return halfWidth;
 	}
 
-
 	@Override
 	public int compareTo(Interval other) {
 		if (this.errorEstimate == other.errorEstimate) return 0;
