@@ -108,6 +108,8 @@ public class AdaptiveQuadrature {
 				break;
 			}
 
+			intervalsToEval.clear();
+
 			do {
 				Interval worstInterval = intervalHeap.poll();
 				errorEstimate -= worstInterval.getErrorEstimate();
