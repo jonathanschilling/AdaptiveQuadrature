@@ -1,6 +1,7 @@
 package de.labathome;
 
 import java.util.List;
+import java.util.function.UnaryOperator;
 
 /**
  * Poles and Weights for Gauss-Kronrod quadrature.
@@ -53,7 +54,7 @@ public class GaussKronrod {
 		2.293532201052922496373200805896959e-02  // +/- 7
 	};
 
-	public static void evalGaussKronrod(Integrand integrand, List<Interval> intervals) {
+	public static void evalGaussKronrod(UnaryOperator<double[]> integrand, List<Interval> intervals) {
 		int numIntervals = intervals.size();
 
 		double[] evaluationLocations = new double[numIntervals*NUM_KRONROD_POINTS];
@@ -87,7 +88,7 @@ public class GaussKronrod {
 		}
 
 		// evaluate integrand
-		final double[] functionValues = integrand.eval(evaluationLocations);
+		final double[] functionValues = integrand.apply(evaluationLocations);
 
 		// compute Gauss-Kronrod quadrature results
 

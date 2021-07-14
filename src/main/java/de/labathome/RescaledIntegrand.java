@@ -1,8 +1,10 @@
 package de.labathome;
 
-public class RescaledIntegrand implements Integrand {
+import java.util.function.UnaryOperator;
 
-	private Integrand integrand;
+public class RescaledIntegrand implements UnaryOperator<double[]> {
+
+	private UnaryOperator<double[]> integrand;
 
 	private double lowerBound;
 	private double upperBound;
@@ -10,7 +12,7 @@ public class RescaledIntegrand implements Integrand {
 	private double scaledLowerBound;
 	private double scaledUpperBound;
 
-	public RescaledIntegrand(Integrand integrand, double lowerBound, double upperBound) {
+	public RescaledIntegrand(UnaryOperator<double[]> integrand, double lowerBound, double upperBound) {
 		this.integrand = integrand;
 		this.lowerBound = lowerBound;
 		this.upperBound = upperBound;
@@ -37,10 +39,10 @@ public class RescaledIntegrand implements Integrand {
 	}
 
 	@Override
-	public double[] eval(double... x) {
+	public double[] apply(double[] x) {
 		if (Double.isFinite(lowerBound) && Double.isFinite(upperBound)) {
 			// quick return: if no rescaling is needed, evaluate directly
-			return integrand.eval(x);
+			return integrand.apply(x);
 		}
 
 		final int nPoints = x.length;
@@ -67,7 +69,7 @@ public class RescaledIntegrand implements Integrand {
 			}
 		}
 
-		final double[] evalIntegrand = integrand.eval(rescaledX);
+		final double[] evalIntegrand = integrand.apply(rescaledX);
 		for (int i=0; i<nPoints; ++i) {
 			evalIntegrand[i] *= jacobianFactors[i];
 		}

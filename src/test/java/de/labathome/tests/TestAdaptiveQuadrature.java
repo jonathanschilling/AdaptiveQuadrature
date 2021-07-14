@@ -4,8 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.function.UnaryOperator;
+
 import de.labathome.AdaptiveQuadrature;
-import de.labathome.Integrand;
 
 public class TestAdaptiveQuadrature {
 
@@ -20,21 +21,16 @@ public class TestAdaptiveQuadrature {
 
 		final double tolerance = 1.0e-12;
 
-		class Parabola implements Integrand {
-			@Override
-			public double[] eval(double... x) {
-				int n = x.length;
-				double[] f = new double[n];
-				for (int i=0; i<n; ++i) {
-					f[i] = 3.0*x[i]*x[i];
-				}
-				return f;
+		UnaryOperator<double[]> parabola = x -> {
+			int n = x.length;
+			double[] f = new double[n];
+			for (int i=0; i<n; ++i) {
+				f[i] = 3.0*x[i]*x[i];
 			}
+			return f;
 		};
 
-		Parabola integrand = new Parabola();
-
-		double[] result = AdaptiveQuadrature.integrate(integrand, 0.0, 1.0, tolerance, tolerance, 0);
+		double[] result = AdaptiveQuadrature.integrate(parabola, 0.0, 1.0, tolerance, tolerance, 0);
 
 		assertAbsRelEqual(1.0, result[0], tolerance);
 		assertAbsRelEqual(0.0, result[1], tolerance);
@@ -51,21 +47,16 @@ public class TestAdaptiveQuadrature {
 
 		final double tolerance = 1.0e-12;
 
-		class ExpX2 implements Integrand {
-			@Override
-			public double[] eval(double... x) {
-				int n = x.length;
-				double[] f = new double[n];
-				for (int i=0; i<n; ++i) {
-					f[i] = Math.exp(-x[i]*x[i]);
-				}
-				return f;
+		UnaryOperator<double[]> expX2 = x -> {
+			int n = x.length;
+			double[] f = new double[n];
+			for (int i=0; i<n; ++i) {
+				f[i] = Math.exp(-x[i]*x[i]);
 			}
+			return f;
 		};
 
-		ExpX2 integrand = new ExpX2();
-
-		double[] result = AdaptiveQuadrature.integrate(integrand, 0.0, Double.POSITIVE_INFINITY, tolerance, tolerance, 0);
+		double[] result = AdaptiveQuadrature.integrate(expX2, 0.0, Double.POSITIVE_INFINITY, tolerance, tolerance, 0);
 
 		assertAbsRelEqual(Math.sqrt(Math.PI)/2.0, result[0], tolerance);
 		assertAbsRelEqual(0.0, result[1], tolerance);

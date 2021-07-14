@@ -2,6 +2,7 @@ package de.labathome;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.UnaryOperator;
 
 /**
  * Adaptive one-dimensional Gauss-Kronrod quadrature.<br>
@@ -39,7 +40,7 @@ public class AdaptiveQuadrature {
 	 * @param absTol absolute tolerance; set to {@code Double.NaN} to disable
 	 * @param maxEval maximum number of function evaluations; set to 0 to disable limit on number of function evaluations
 	 */
-	public static double[] integrate(Integrand integrand, double lowerBound, double upperBound, double relTol, double absTol, int maxEval) {
+	public static double[] integrate(UnaryOperator<double[]> integrand, double lowerBound, double upperBound, double relTol, double absTol, int maxEval) {
 
 		if (Double.isNaN(lowerBound)) {
 			throw new RuntimeException("lower bound must not be NaN");
