@@ -18,7 +18,7 @@ public class AdaptiveQuadratureExample {
 		};
 
 		double[] result = AdaptiveQuadrature.integrate(parabola, 0.0, 1.0, 1.0e-6, 1.0e-6, 0);
-		System.out.printf("1/3 int_0^1 x^2 dx = %.3e +/- %.3e\n", result[0], result[1]);
+		System.out.printf("\\int_0^1 3*x^2 dx = %.3e +/- %.3e\n", result[0], result[1]);
 	}
 
 }
