@@ -33,7 +33,7 @@ public class AdaptiveQuadrature {
 	 * or a prescribed relative tolerance is fulfilled.
 	 * Note that {@code relTol} and {@code absTol} must not be both NaN.
 	 *
-	 * @param integrand function to integrate
+	 * @param integrand univaritate function to integrate; evaluate at many points at once for speed
 	 * @param lowerBound lower boundary of integral; can be {@code Double.NEGATIVE_INFINITY}
 	 * @param upperBound upper boundary of integral; can be {@code Double.POSITIVE_INFINITY}
 	 * @param relTol relative tolerance; set to {@code Double.NaN} to disable
