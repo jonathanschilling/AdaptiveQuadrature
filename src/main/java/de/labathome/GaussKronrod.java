@@ -93,7 +93,7 @@ public class GaussKronrod {
 		// compute Gauss-Kronrod quadrature results
 
 		double gVal, kVal1, kVal2;
-		double resultGauss, resultKronrod;
+		double resultGauss, resultKrnrd;
 		double resultAbs, resultResidual;
 		double errorEstimate, mean, scale;
 		for (int i=0; i<numIntervals; ++i) {
@@ -103,8 +103,8 @@ public class GaussKronrod {
 			intervalStartIdx = i*NUM_KRONROD_POINTS;
 
 			resultGauss = functionValues[intervalStartIdx] * W_GAUSS[0];
-			resultKronrod = functionValues[intervalStartIdx] * W_KRNRD[0];
-			resultAbs = Math.abs(resultKronrod);
+			resultKrnrd = functionValues[intervalStartIdx] * W_KRNRD[0];
+			resultAbs = Math.abs(resultKrnrd);
 
 			// 7-point Gauss-Legendre
 			for (int j=1; j <= NUM_GAUSS_POINTS/2; ++j) {
@@ -112,35 +112,35 @@ public class GaussKronrod {
 //				System.out.printf("Kronrod: f[%2d]*wK[%d] ; f[%2d]*wK[%d]\n", 2*j-1, 2*j, 2*j, 2*j);
 				gVal = (functionValues[intervalStartIdx+2*j-1] + functionValues[intervalStartIdx+2*j])*W_GAUSS[j];
 				kVal1 = functionValues[intervalStartIdx+2*j-1]*W_KRNRD[2*j];
-				kVal2 = functionValues[intervalStartIdx+2*j]*W_KRNRD[2*j];
+				kVal2 = functionValues[intervalStartIdx+2*j  ]*W_KRNRD[2*j];
 				resultGauss += gVal;
-				resultKronrod += kVal1 + kVal2;
+				resultKrnrd += kVal1 + kVal2;
 				resultAbs += Math.abs(kVal1) + Math.abs(kVal2);
 			}
 
 			// additional 8 points for 15-point Kronrod
 			for (int j=0; j <= NUM_GAUSS_POINTS/2; ++j) {
 //				System.out.printf("Kronrod: f[%2d]*wK[%d] ; f[%2d]*wK[%d]\n", NUM_GAUSS_POINTS+2*j, 2*j+1, NUM_GAUSS_POINTS+2*j+1, 2*j+1);
-				kVal1 = functionValues[intervalStartIdx+NUM_GAUSS_POINTS+2*j]*W_KRNRD[2*j+1];
+				kVal1 = functionValues[intervalStartIdx+NUM_GAUSS_POINTS+2*j  ]*W_KRNRD[2*j+1];
 				kVal2 = functionValues[intervalStartIdx+NUM_GAUSS_POINTS+2*j+1]*W_KRNRD[2*j+1];
-				resultKronrod += kVal1 + kVal2;
+				resultKrnrd += kVal1 + kVal2;
 				resultAbs += Math.abs(kVal1) + Math.abs(kVal2);
 			}
 			resultAbs *= halfWidth;
-			interval.setIntegralValue(resultKronrod*halfWidth);
+			interval.setIntegralValue(resultKrnrd*halfWidth);
 
-			errorEstimate = Math.abs(resultKronrod - resultGauss) * halfWidth;
+			errorEstimate = Math.abs(resultKrnrd - resultGauss) * halfWidth;
 
 			// subtract half the actual result from sum of absolute contributions
-			mean = resultKronrod * 0.5;
+			mean = resultKrnrd * 0.5;
 			resultResidual = Math.abs(functionValues[intervalStartIdx] - mean) * W_KRNRD[0];
 			for (int j=1; j <= NUM_GAUSS_POINTS/2; ++j) {
 				kVal1 = Math.abs(functionValues[intervalStartIdx+2*j-1] - mean) * W_KRNRD[2*j];
-				kVal2 = Math.abs(functionValues[intervalStartIdx+2*j] - mean) * W_KRNRD[2*j];
+				kVal2 = Math.abs(functionValues[intervalStartIdx+2*j  ] - mean) * W_KRNRD[2*j];
 				resultResidual += kVal1 + kVal2;
 			}
 			for (int j=0; j <= NUM_GAUSS_POINTS/2; ++j) {
-				kVal1 = Math.abs(functionValues[intervalStartIdx+NUM_GAUSS_POINTS+2*j] - mean) * W_KRNRD[2*j+1];
+				kVal1 = Math.abs(functionValues[intervalStartIdx+NUM_GAUSS_POINTS+2*j  ] - mean) * W_KRNRD[2*j+1];
 				kVal2 = Math.abs(functionValues[intervalStartIdx+NUM_GAUSS_POINTS+2*j+1] - mean) * W_KRNRD[2*j+1];
 				resultResidual += kVal1 + kVal2;
 			}

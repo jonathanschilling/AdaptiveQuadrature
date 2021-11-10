@@ -33,12 +33,13 @@ public class AdaptiveQuadrature {
 	 * or a prescribed relative tolerance is fulfilled.
 	 * Note that {@code relTol} and {@code absTol} must not be both NaN.
 	 *
-	 * @param integrand univaritate function to integrate; evaluate at many points at once for speed
+	 * @param integrand  univaritate function to integrate; evaluate at many points at once for speed
 	 * @param lowerBound lower boundary of integral; can be {@code Double.NEGATIVE_INFINITY}
 	 * @param upperBound upper boundary of integral; can be {@code Double.POSITIVE_INFINITY}
 	 * @param relTol relative tolerance; set to {@code Double.NaN} to disable
 	 * @param absTol absolute tolerance; set to {@code Double.NaN} to disable
 	 * @param maxEval maximum number of function evaluations; set to 0 to disable limit on number of function evaluations
+	 * @return [value, error] value of integral and error estimate
 	 */
 	public static double[] integrate(UnaryOperator<double[]> integrand, double lowerBound, double upperBound, double relTol, double absTol, int maxEval) {
 
@@ -105,7 +106,7 @@ public class AdaptiveQuadrature {
 			}
 
 			if (converged) {
-				System.out.println("converged after "+numEval+" function evaluations");
+				// System.out.println("converged after "+numEval+" function evaluations");
 				break;
 			}
 
