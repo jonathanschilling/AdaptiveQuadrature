@@ -2,6 +2,7 @@ package de.labathome;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
 
 /**
@@ -33,7 +34,7 @@ public class AdaptiveQuadrature {
 	 * or a prescribed relative tolerance is fulfilled.
 	 * Note that {@code relTol} and {@code absTol} must not be both NaN.
 	 *
-	 * @param integrand  univaritate function to integrate; evaluate at many points at once for speed
+	 * @param integrand univaritate function to integrate; evaluate at many points at once for speed
 	 * @param lowerBound lower boundary of integral; can be {@code Double.NEGATIVE_INFINITY}
 	 * @param upperBound upper boundary of integral; can be {@code Double.POSITIVE_INFINITY}
 	 * @param relTol relative tolerance; set to {@code Double.NaN} to disable
@@ -41,7 +42,30 @@ public class AdaptiveQuadrature {
 	 * @param maxEval maximum number of function evaluations; set to 0 to disable limit on number of function evaluations
 	 * @return [value, error] value of integral and error estimate
 	 */
-	public static double[] integrate(UnaryOperator<double[]> integrand, double lowerBound, double upperBound, double relTol, double absTol, int maxEval) {
+	public static double[] integrate(UnaryOperator<double[]> integrand,
+			double lowerBound, double upperBound, double relTol, double absTol, int maxEval) {
+		AtomicBoolean gracefulStop = new AtomicBoolean(false);
+		return AdaptiveQuadrature.integrate(integrand, lowerBound, upperBound, relTol, absTol, maxEval, gracefulStop);
+	}
+
+	/**
+	 * Integrate the given integrand from {@code lowerBound} to {@code upperBound}.
+	 * The numerical quadrature will be successively refined until either a given absolute tolerance
+	 * or a prescribed relative tolerance is fulfilled.
+	 * Note that {@code relTol} and {@code absTol} must not be both NaN.
+	 *
+	 * @param integrand  univaritate function to integrate; evaluate at many points at once for speed
+	 * @param lowerBound lower boundary of integral; can be {@code Double.NEGATIVE_INFINITY}
+	 * @param upperBound upper boundary of integral; can be {@code Double.POSITIVE_INFINITY}
+	 * @param relTol relative tolerance; set to {@code Double.NaN} to disable
+	 * @param absTol absolute tolerance; set to {@code Double.NaN} to disable
+	 * @param maxEval maximum number of function evaluations; set to 0 to disable limit on number of function evaluations
+	 * @param gracefulStop flag to be set by integrand if the current level of discretization suddenly reveals that the integral is not well-defined anymore
+	 * @return [value, error] value of integral and error estimate; null if gracefulStop was activated
+	 */
+	public static double[] integrate(UnaryOperator<double[]> integrand,
+			double lowerBound, double upperBound, double relTol, double absTol, int maxEval,
+			AtomicBoolean gracefulStop) {
 
 		if (Double.isNaN(lowerBound)) {
 			throw new RuntimeException("lower bound must not be NaN");
@@ -70,7 +94,7 @@ public class AdaptiveQuadrature {
 		}
 
 		// apply re-scaling of integrand if one or both integration bounds are infinite
-		RescaledIntegrand rescaledIntegrand = new RescaledIntegrand(integrand, lowerBound, upperBound);
+		RescaledIntegrand rescaledIntegrand = new RescaledIntegrand(integrand, lowerBound, upperBound, gracefulStop);
 		final double scaledLowerBound = rescaledIntegrand.getScaledLowerBound();
 		final double scaledUpperBound = rescaledIntegrand.getScaledUpperBound();
 
@@ -82,7 +106,10 @@ public class AdaptiveQuadrature {
 		List<Interval> intervalsToEval = new ArrayList<>();
 		intervalsToEval.add(rootInterval);
 
-		GaussKronrod.evalGaussKronrod(rescaledIntegrand, intervalsToEval);
+		GaussKronrod.evalGaussKronrod(rescaledIntegrand, intervalsToEval, gracefulStop);
+		if (gracefulStop.get()) {
+			return null;
+		}
 
 		IntervalHeap intervalHeap = new IntervalHeap();
 		intervalHeap.add(intervalsToEval.get(0));
@@ -132,7 +159,10 @@ public class AdaptiveQuadrature {
 
 			} while (intervalHeap.size() > 0 && (numEval < maxEval || maxEval==0) && !converged);
 
-			GaussKronrod.evalGaussKronrod(rescaledIntegrand, intervalsToEval);
+			GaussKronrod.evalGaussKronrod(rescaledIntegrand, intervalsToEval, gracefulStop);
+			if (gracefulStop.get()) {
+				return null;
+			}
 
 			for (Interval interval: intervalsToEval) {
 				intervalHeap.add(interval);
@@ -140,7 +170,7 @@ public class AdaptiveQuadrature {
 		}
 
 		if (!converged) {
-			System.out.println("Cubature did not converge after "+numEval+" function evaluations!");
+			System.out.println("did not converge after "+numEval+" function evaluations!");
 		}
 
 		// assemble final estimates for result and error estimate

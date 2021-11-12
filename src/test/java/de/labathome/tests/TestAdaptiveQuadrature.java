@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
 
 import de.labathome.AdaptiveQuadrature;
@@ -63,6 +64,65 @@ public class TestAdaptiveQuadrature {
 	}
 
 	/**
+	 * Test that AdaptiveQuadrature can be gracefully stopped when a certain condition is fulfilled within the integrand.
+	 */
+	@Test
+	public void testGracefulStop() {
+
+		final double tolerance = 1.0e-12;
+
+		final int maxEval = 100;
+
+		class ExpX2 implements UnaryOperator<double[]> {
+
+			private AtomicBoolean gracefulStop;
+			private int numEval;
+
+			public ExpX2(AtomicBoolean gracefulStop) {
+				this.gracefulStop = gracefulStop;
+				this.numEval = 0;
+			}
+
+			@Override
+			public double[] apply(double[] x) {
+				int n = x.length;
+				numEval += n;
+
+				if (numEval > maxEval) {
+//					System.out.printf("evaluated at %3d points --> stop\n", numEval);
+					while (!gracefulStop.compareAndSet(false, true)) {
+						// wait for gracefulStop to turn false again
+					}
+					return null;
+				}
+//				else {
+//					System.out.printf("evaluated at %3d points --> go on\n", numEval);
+//				}
+
+				double[] f = new double[n];
+				for (int i=0; i<n; ++i) {
+					f[i] = Math.exp(-x[i]*x[i]);
+				}
+				return f;
+			}
+
+			public int getNumEval() {
+				return numEval;
+			}
+		};
+
+		AtomicBoolean gracefulStop = new AtomicBoolean(false);
+		ExpX2 expX2 = new ExpX2(gracefulStop);
+
+		AdaptiveQuadrature.integrate(expX2, 0.0, Double.POSITIVE_INFINITY, tolerance, tolerance, 0, gracefulStop);
+
+		int numEval = expX2.getNumEval();
+
+		assertEquals(true, gracefulStop.get());
+		assertTrue(numEval > maxEval);
+	}
+
+	/**
 	 * Combined check on relative and absolute deviation between expected and actual values.
 	 * From Gill, Murray & Wright, "Practial Optimization" (1984).
 	 *
@@ -77,5 +137,4 @@ public class TestAdaptiveQuadrature {
 					expected, actual, relAbsError, relAbsTolerance));
 		}
 	}
-
 }

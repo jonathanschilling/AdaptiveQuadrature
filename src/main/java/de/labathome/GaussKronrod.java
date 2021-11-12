@@ -1,6 +1,7 @@
 package de.labathome;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
 
 /**
@@ -54,7 +55,7 @@ public class GaussKronrod {
 		2.293532201052922496373200805896959e-02  // +/- 7
 	};
 
-	public static void evalGaussKronrod(UnaryOperator<double[]> integrand, List<Interval> intervals) {
+	public static void evalGaussKronrod(UnaryOperator<double[]> integrand, List<Interval> intervals, AtomicBoolean gracefulStop) {
 		int numIntervals = intervals.size();
 
 		double[] evaluationLocations = new double[numIntervals*NUM_KRONROD_POINTS];
@@ -62,7 +63,6 @@ public class GaussKronrod {
 		int intervalStartIdx;
 		double center, halfWidth;
 		for (int i=0; i<numIntervals; ++i) {
-
 			Interval interval = intervals.get(i);
 			center = interval.getCenter();
 			halfWidth = interval.getHalfWidth();
@@ -89,6 +89,9 @@ public class GaussKronrod {
 
 		// evaluate integrand
 		final double[] functionValues = integrand.apply(evaluationLocations);
+		if (gracefulStop.get()) {
+			return;
+		}
 
 		// compute Gauss-Kronrod quadrature results
 

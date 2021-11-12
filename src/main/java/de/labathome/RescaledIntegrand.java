@@ -1,10 +1,12 @@
 package de.labathome;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
 
 public class RescaledIntegrand implements UnaryOperator<double[]> {
 
 	private UnaryOperator<double[]> integrand;
+	private AtomicBoolean gracefulStop;
 
 	private double lowerBound;
 	private double upperBound;
@@ -12,8 +14,9 @@ public class RescaledIntegrand implements UnaryOperator<double[]> {
 	private double scaledLowerBound;
 	private double scaledUpperBound;
 
-	public RescaledIntegrand(UnaryOperator<double[]> integrand, double lowerBound, double upperBound) {
+	public RescaledIntegrand(UnaryOperator<double[]> integrand, double lowerBound, double upperBound, AtomicBoolean gracefulStop) {
 		this.integrand = integrand;
+		this.gracefulStop = gracefulStop;
 		this.lowerBound = lowerBound;
 		this.upperBound = upperBound;
 
@@ -70,11 +73,16 @@ public class RescaledIntegrand implements UnaryOperator<double[]> {
 		}
 
 		final double[] evalIntegrand = integrand.apply(rescaledX);
-		for (int i=0; i<nPoints; ++i) {
-			evalIntegrand[i] *= jacobianFactors[i];
+		if (!gracefulStop.get()) {
+			for (int i=0; i<nPoints; ++i) {
+				evalIntegrand[i] *= jacobianFactors[i];
+			}
+			return evalIntegrand;
+		} else {
+			// if gracefulStop feature cancels the integration, the integrand might return invalid results
+			// --> skip using the returned value in any way
+			return null;
 		}
-
-		return evalIntegrand;
 	}
 
 }
